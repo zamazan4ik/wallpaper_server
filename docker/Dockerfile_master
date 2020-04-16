@@ -1,0 +1,30 @@
+FROM fedora:latest
+
+LABEL maintainer="Alexander Zaitsev <zamazan4ik@tut.by>"
+
+ARG WALLPAPERSERVICE_SOURCE_URL=https://github.com/ZaMaZaN4iK/wallpaper_server.git
+
+RUN dnf install -y ca-certificates perl autoconf automake libtool clang cmake make git python python3-pip \
+    && pip install conan
+
+WORKDIR /usr/src/wallpaper_server
+
+RUN git clone ${WALLPAPERSERVICE_SOURCE_URL}
+
+WORKDIR wallpaper_server
+
+RUN conan remote add stiffstream https://api.bintray.com/conan/stiffstream/public
+RUN CC=clang CXX=clang++ cmake -B build -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build build --target install && \
+    rm -rf /usr/src/wallpaper_server
+
+RUN groupadd -g 2000 wallpaper_user && \
+    useradd -r -u 2000 -g wallpaper_user wallpaper_user && \
+    chown wallpaper_user:wallpaper_user /usr/local/bin/WallpaperService
+
+USER wallpaper_user
+
+WORKDIR /usr/local/bin
+
+ENTRYPOINT ["/usr/local/bin/WallpaperService"]
+

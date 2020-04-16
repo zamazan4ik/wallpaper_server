@@ -5,12 +5,14 @@
 #include <exception>
 #include <filesystem>
 #include <iostream>
+#include <memory>
 #include <mutex>
 #include <random>
 #include <string>
 #include <thread>
 
 using router_t = restinio::router::express_router_t<>;
+using LibraryType = std::vector<std::filesystem::path>;
 
 const char *
 content_type_by_file_extention( const restinio::string_view_t & ext )
@@ -83,9 +85,9 @@ content_type_by_file_extention( const restinio::string_view_t & ext )
     return "application/text";
 }
 
-auto createDatabase(std::string const& libraryPath)
+LibraryType createDatabase(std::string const& libraryPath)
 {
-    std::vector<std::filesystem::path> result;
+    LibraryType result;
     for(auto const& p: std::filesystem::recursive_directory_iterator(libraryPath))
     {
         if (p.is_regular_file())
@@ -100,11 +102,11 @@ auto createDatabase(std::string const& libraryPath)
 std::mutex mt;
 std::filesystem::path imageOfTheDay;
 
-auto create_request_handler()
+auto create_request_handler(LibraryType const& library)
 {
     auto router = std::make_unique<router_t>();
 
-    router->http_get("/api/wallpaper/get", [](restinio::request_handle_t req, auto)
+    router->http_get("/api/v1/wallpaper/image_of_the_day", [](restinio::request_handle_t req, auto)
     {
         try
         {
@@ -147,6 +149,51 @@ auto create_request_handler()
                             .append_header_date_field()
                             .connection_close()
                             .done();
+        }
+    });
+
+    router->http_get("/api/v1/wallpaper/random", [&library](restinio::request_handle_t req, auto)
+    {
+        try
+        {
+            std::random_device rd;
+            std::mt19937 gen{rd()};
+            std::uniform_int_distribution<uint32_t> dis(0, library.size() - 1);
+            std::filesystem::path chosenImage = library.at(dis(gen));
+
+            auto sf = restinio::sendfile(chosenImage);
+            auto modified_at =
+                    restinio::make_date_field_value(sf.meta().last_modified_at());
+
+            auto expires_at =
+                    restinio::make_date_field_value(
+                            std::chrono::system_clock::now() +
+                            std::chrono::hours(24 * 7));
+
+            return
+                    req->create_response()
+                            .append_header(
+                                    restinio::http_field::server,
+                                    "Wallpaper service")
+                            .append_header_date_field()
+                            .append_header(
+                                    restinio::http_field::last_modified,
+                                    std::move(modified_at))
+                            .append_header(
+                                    restinio::http_field::expires,
+                                    std::move(expires_at))
+                            .append_header(
+                                    restinio::http_field::content_type,
+                                    content_type_by_file_extention(chosenImage.extension().string()))
+                            .set_body(std::move(sf))
+                            .done();
+        }
+        catch (std::exception const& e)
+        {
+            return req->create_response( restinio::status_not_found() )
+                    .append_header_date_field()
+                    .connection_close()
+                    .done();
         }
     });
 
@@ -206,7 +253,7 @@ int main(int argc, char* argv[])
         using traits_t = restinio::traits_t<restinio::asio_timer_manager_t, restinio::single_threaded_ostream_logger_t, router_t>;
         restinio::run(
             restinio::on_this_thread<traits_t>().port(ServicePort).address("localhost").
-            request_handler(create_request_handler()));
+            request_handler(create_request_handler(imageLibrary)));
     }
     catch (std::exception const& ex)
     {
