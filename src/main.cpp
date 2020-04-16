@@ -117,13 +117,6 @@ auto create_request_handler(LibraryType const& library)
             }
 
             auto sf = restinio::sendfile(chosenImage);
-            auto modified_at =
-                    restinio::make_date_field_value(sf.meta().last_modified_at());
-
-            auto expires_at =
-                    restinio::make_date_field_value(
-                            std::chrono::system_clock::now() +
-                            std::chrono::hours(24 * 7));
 
             return
                     req->create_response()
@@ -131,12 +124,6 @@ auto create_request_handler(LibraryType const& library)
                                     restinio::http_field::server,
                                     "Wallpaper service")
                             .append_header_date_field()
-                            .append_header(
-                                    restinio::http_field::last_modified,
-                                    std::move(modified_at))
-                            .append_header(
-                                    restinio::http_field::expires,
-                                    std::move(expires_at))
                             .append_header(
                                     restinio::http_field::content_type,
                                     content_type_by_file_extention(chosenImage.extension().string()))
@@ -162,13 +149,6 @@ auto create_request_handler(LibraryType const& library)
             std::filesystem::path chosenImage = library.at(dis(gen));
 
             auto sf = restinio::sendfile(chosenImage);
-            auto modified_at =
-                    restinio::make_date_field_value(sf.meta().last_modified_at());
-
-            auto expires_at =
-                    restinio::make_date_field_value(
-                            std::chrono::system_clock::now() +
-                            std::chrono::hours(24 * 7));
 
             return
                     req->create_response()
@@ -177,11 +157,8 @@ auto create_request_handler(LibraryType const& library)
                                     "Wallpaper service")
                             .append_header_date_field()
                             .append_header(
-                                    restinio::http_field::last_modified,
-                                    std::move(modified_at))
-                            .append_header(
-                                    restinio::http_field::expires,
-                                    std::move(expires_at))
+                                    restinio::http_field::cache_control,
+                                    "no-cache")
                             .append_header(
                                     restinio::http_field::content_type,
                                     content_type_by_file_extention(chosenImage.extension().string()))
