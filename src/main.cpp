@@ -168,7 +168,9 @@ int main(int argc, char* argv[])
         CLI11_PARSE(app, argc, argv);
 
         // Initialize library
+        std::cout << "Start image database creation" << std::endl;
         auto const imageLibrary = createDatabase(imageLibraryPath);
+        std::cout << "Finish image database creation" << std::endl;
 
         if (imageLibrary.empty())
         {
@@ -179,7 +181,9 @@ int main(int argc, char* argv[])
         std::mt19937 gen{rd()};
         std::uniform_int_distribution<uint32_t> dis(0, imageLibrary.size() - 1);
 
+        std::cout << "Start first updating image of the day" << std::endl;
         imageOfTheDay = imageLibrary.at(dis(gen));
+        std::cout << "Finish first updating image of the day" << std::endl;
 
         std::thread updatePapersThread([&imageLibrary, &dis, &gen]()
             {
@@ -190,7 +194,9 @@ int main(int argc, char* argv[])
 
                     {
                         std::lock_guard lg{mt};
+                        std::cout << "Start updating image of the day" << std::endl;
                         imageOfTheDay = imageLibrary.at(dis(gen));
+                        std::cout << "Finish updating image of the day" << std::endl;
                     }
                 }
             });
