@@ -1,2 +1,2 @@
-# wallpaper_server
-Serves wallpaper from a source
+# Wallpaper service
+Serves wallpaper from a source in safe and blazing fast manner :)
