@@ -12,7 +12,12 @@ use std::io;
 #[clap(version = "1.0", author = "Alexander Zaitsev <zamazan4ik@tut.by>")]
 struct Opts {
     /// Image library path
-    library_path: PathBuf
+    #[clap(short, long)]
+    library_path: PathBuf,
+    #[clap(short, long, default_value = "0.0.0.0")]
+    address: String,
+    #[clap(short, long, default_value = "8080")]
+    port: u16
 }
 
 async fn get_random_picture(data: web::Data<image_library::ImageLibrary>) -> io::Result<NamedFile> {
@@ -35,7 +40,7 @@ async fn main() -> std::io::Result<()> {
             .route("/api/v1/wallpaper/random", web::get()
                 .to(get_random_picture))
     })
-        .bind("127.0.0.1:8088")?
+        .bind(format!("{}:{}", opts.address, opts.port))?
         .run()
         .await
 }
