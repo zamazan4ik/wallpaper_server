@@ -35,3 +35,8 @@
 #Added by cargo
 
 /target
+
+# IDEs specific
+
+/.idea
+
