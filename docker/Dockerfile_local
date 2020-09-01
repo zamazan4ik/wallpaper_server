@@ -6,4 +6,11 @@ RUN cargo install --path .
 FROM debian:buster-slim
 RUN apt-get update && apt-get install -y openssl ca-certificates
 COPY --from=builder /usr/local/cargo/bin/wallpaper_service /usr/local/bin/wallpaper_service
-CMD ["wallpaper_service"]
+
+RUN groupadd -g 2000 wallpaper_user && \
+    useradd -r -u 2000 -g wallpaper_user wallpaper_user && \
+    chown wallpaper_user:wallpaper_user /usr/local/bin/wallpaper_service
+USER wallpaper_user
+
+WORKDIR /usr/local/bin
+ENTRYPOINT ["/usr/local/bin/wallpaper_service"]
